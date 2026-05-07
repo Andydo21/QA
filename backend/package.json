@@ -7,7 +7,23 @@
     "dev": "nodemon server.js",
     "migrate": "node db/run_migrations.js",
     "sync:intraday": "node jobs/cron_intraday_sync.js",
-    "backfill": "node jobs/cron_backfill.js"
+    "backfill": "node jobs/cron_backfill.js",
+    "test": "jest --testPathPattern=tests/unit --coverage",
+    "test:watch": "jest --testPathPattern=tests/unit --watch",
+    "test:selenium:sheet1": "node tests/part1_selenium/run_sheet1_selenium.js",
+    "test:part1": "node tests/part1_selenium/run_all.js"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "controllers/**/*.js",
+      "middleware/**/*.js",
+      "services/**/*.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "lcov"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -35,6 +51,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.10",
+    "selenium-webdriver": "^4.32.0"
   }
 }

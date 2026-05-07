@@ -28,9 +28,23 @@ const predictionRoutes = require('./routes/predictionRoutes');
 const app = express();
 const server = http.createServer(app);
 
+const allowedOrigins = new Set([
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+].filter(Boolean));
+
 app.use(
     cors({
-        origin: process.env.CLIENT_URL || "*",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin) || process.env.CLIENT_URL === '*' || process.env.FRONTEND_URL === '*') {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
         allowedHeaders: ["Content-Type", "Authorization"]
     })

@@ -9,7 +9,7 @@ import { UserContext } from '../../context/UserContext'
 import { useNavigate } from 'react-router-dom'
 const SignUp = () => {
   const [profilePic, setProfilePic] = useState(null)
-  const [fullName, setFullName] = useState()
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
