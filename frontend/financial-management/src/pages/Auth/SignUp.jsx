@@ -71,19 +71,23 @@ const SignUp = () => {
         </p>
         <form onSubmit={handleSignUp}>
           <div className='grid gird-cols-1 md:grid-cols-2 gap-4'>
+            {/* ORIGINAL: no autoComplete hints on signup fields */}
+            {/* NEW: add name/username/new-password hints for browser autofill */}
             <Input
               value = {fullName}
               onChange = {({target}) => setFullName(target.value)}
               label = "Họ và tên"
               placeholder = "Nhập họ và tên của bạn"
               type = "text"
+              autoComplete = "name"
             ></Input>
             <Input
               value = {email}
               onChange = {({target}) => setEmail(target.value)}
               label = "Địa chỉ Email"
               placeholder = "Nhập email của bạn"
-              type = "text"
+              type = "email"
+              autoComplete = "username"
             ></Input>
 
             <div className = "col-span-2">
@@ -93,6 +97,7 @@ const SignUp = () => {
                 label = "Mật khẩu"
                 placeholder = "Nhập mật khẩu của bạn"
                 type = "password"
+                autoComplete = "new-password"
               ></Input>
             </div>
           </div>

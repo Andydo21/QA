@@ -1,4 +1,3 @@
-version: "3"
 services:
   postgres:
     image: timescale/timescaledb:latest-pg14
@@ -18,5 +17,14 @@ services:
     ports:
       - "6379:6379"
 
+  mongo:
+    image: mongo:7
+    container_name: finance_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
 volumes:
   pgdata:
+  mongodata:

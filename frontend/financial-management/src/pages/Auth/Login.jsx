@@ -63,12 +63,15 @@ const handleLogin = async (e) => {
         </p>
 
         <form onSubmit={handleLogin}>
+          {/* ORIGINAL: type="text" and no autoComplete */}
+          {/* NEW: semantic type + autocomplete to remove browser warning */}
           <Input
             value = {email}
             onChange = {({target}) => setEmail(target.value)}
             label = "Địa chỉ Email"
             placeholder = "Nhập email của bạn"
-            type = "text"
+            type = "email"
+            autoComplete = "username"
           ></Input>
           <Input
             value = {password}
@@ -76,6 +79,7 @@ const handleLogin = async (e) => {
             label = "Mật khẩu"
             placeholder = "Nhập mật khẩu của bạn"
             type = "password"
+            autoComplete = "current-password"
           ></Input>
 
           <div className="flex justify-end mb-4">

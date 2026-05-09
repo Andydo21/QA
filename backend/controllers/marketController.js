@@ -740,6 +740,7 @@ exports.getTickerDetail = async (req, res) => {
     
     const asset = assetQuery.rows[0];
     const assetId = asset.id;
+    const isCrypto = asset.asset_type === 'crypto' || (asset.exchange && asset.exchange.toUpperCase() === 'BINANCE');
     
     // Get latest OHLCV data
     const latestQuery = `
@@ -752,7 +753,110 @@ exports.getTickerDetail = async (req, res) => {
     `;
     
     const { rows: latestRows } = await pool.query(latestQuery, [assetId]);
-    
+    // ORIGINAL:
+    // if (latestRows.length === 0) {
+    //   return res.status(404).json({ error: 'no price data' });
+    // }
+    // NEW: fallback to price_ticks for crypto symbols to avoid 404 when OHLCV is missing.
+    if (latestRows.length === 0 && isCrypto) {
+      const latestTickQuery = `
+        SELECT price, volume, ts
+        FROM price_ticks
+        WHERE asset_id = $1
+        AND ts >= NOW() - INTERVAL '30 days'
+        ORDER BY ts DESC
+        LIMIT 1
+      `;
+
+      const stats24hQuery = `
+        WITH old_tick AS (
+          SELECT price
+          FROM price_ticks
+          WHERE asset_id = $1
+          AND ts <= NOW() - INTERVAL '24 hours'
+          ORDER BY ts DESC
+          LIMIT 1
+        ),
+        recent AS (
+          SELECT
+            MAX(price) AS high_24h,
+            MIN(price) AS low_24h,
+            SUM(volume) AS vol_24h
+          FROM price_ticks
+          WHERE asset_id = $1
+          AND ts >= NOW() - INTERVAL '24 hours'
+        )
+        SELECT old_tick.price AS prev_price, recent.high_24h, recent.low_24h, recent.vol_24h
+        FROM recent
+        LEFT JOIN old_tick ON true
+      `;
+
+      const yearRangeQuery = `
+        SELECT
+          MAX(price) AS week_52_high,
+          MIN(price) AS week_52_low
+        FROM price_ticks
+        WHERE asset_id = $1
+        AND ts >= NOW() - INTERVAL '365 days'
+      `;
+
+      const [latestTickRes, stats24hRes, yearRangeRes] = await Promise.all([
+        pool.query(latestTickQuery, [assetId]),
+        pool.query(stats24hQuery, [assetId]),
+        pool.query(yearRangeQuery, [assetId])
+      ]);
+
+      if (latestTickRes.rows.length === 0) {
+        return res.status(404).json({ error: 'no price data' });
+      }
+
+      const latestTick = latestTickRes.rows[0];
+      const stats24h = stats24hRes.rows[0] || {};
+      const yearRange = yearRangeRes.rows[0] || {};
+
+      const currentPrice = parseFloat(latestTick.price);
+      const prevPrice = parseFloat(stats24h.prev_price || currentPrice);
+
+      const exchangeRate = await getExchangeRate();
+      const openConverted = await convertPrice(prevPrice, asset.exchange, exchangeRate);
+      const highConverted = await convertPrice(parseFloat(stats24h.high_24h || currentPrice), asset.exchange, exchangeRate);
+      const lowConverted = await convertPrice(parseFloat(stats24h.low_24h || currentPrice), asset.exchange, exchangeRate);
+      const closeConverted = await convertPrice(currentPrice, asset.exchange, exchangeRate);
+      const prevCloseConverted = await convertPrice(prevPrice, asset.exchange, exchangeRate);
+      const fiftyTwoWeekHighConverted = await convertPrice(parseFloat(yearRange.week_52_high || currentPrice), asset.exchange, exchangeRate);
+      const fiftyTwoWeekLowConverted = await convertPrice(parseFloat(yearRange.week_52_low || currentPrice), asset.exchange, exchangeRate);
+
+      const tickerDetail = {
+        symbol: asset.symbol,
+        name: asset.name,
+        exchange: asset.exchange,
+        asset_type: asset.asset_type,
+        open: openConverted.price,
+        high: highConverted.price,
+        low: lowConverted.price,
+        close: closeConverted.price,
+        prevClose: prevCloseConverted.price,
+        volume: parseFloat(stats24h.vol_24h || latestTick.volume || 0),
+        fiftyTwoWeekHigh: fiftyTwoWeekHighConverted.price,
+        fiftyTwoWeekLow: fiftyTwoWeekLowConverted.price,
+        profit: {
+          '1M': 0,
+          '3M': 0,
+          '6M': 0,
+          '1Y': 0
+        },
+        currency: 'VND',
+        timestamp: latestTick.ts
+      };
+
+      await redis.setex(cacheKey, 60, JSON.stringify(tickerDetail));
+
+      return res.json({
+        ...tickerDetail,
+        source: 'db'
+      });
+    }
+
     if (latestRows.length === 0) {
       return res.status(404).json({ error: 'no price data' });
     }

@@ -10,7 +10,9 @@ const SYMBOL_DIRECTORY = [
     { symbol: 'BTCUSDT', name: 'Bitcoin', type: 'crypto' },
     { symbol: 'ETHUSDC', name: 'Ethereum', type: 'crypto' },
     { symbol: 'FPT.VN', name: 'FPT Corp', type: 'stock' },
-    { symbol: 'FPT.VN', name: 'Vietcombank', type: 'stock' },
+    // ORIGINAL: { symbol: 'FPT.VN', name: 'Vietcombank', type: 'stock' },
+    // NEW: use VCB.VN to keep symbol unique and correct company mapping.
+    { symbol: 'VCB.VN', name: 'Vietcombank', type: 'stock' },
     { symbol: 'VHM.VN', name: 'Vingroup', type: 'stock' },
     { symbol: 'MWG', name: 'Mobile World Group', type: 'stock' },
     { symbol: 'HDB', name: 'HDBank', type: 'stock' },
@@ -398,9 +400,11 @@ const WatchlistSection = () => {
                                         {searchTerm.trim() ? 'Không tìm thấy mã phù hợp.' : 'Nhập để tìm kiếm...'}
                                     </div>
                                 )}
-                                {!searchLoading && filteredOptions.map(option => (
+                                {/* ORIGINAL: key={option.symbol} */}
+                                {/* NEW: use symbol-index key to avoid duplicate key warnings */}
+                                {!searchLoading && filteredOptions.map((option, index) => (
                                     <button
-                                        key={option.symbol}
+                                        key={`${option.symbol}-${index}`}
                                         onClick={() => handleAddSymbol(option)}
                                         className="w-full text-left px-4 py-3 hover:bg-violet-50 transition-colors flex flex-col"
                                         disabled={mutationTarget === option.symbol}
@@ -435,8 +439,10 @@ const WatchlistSection = () => {
                     {!loading && watchlist.length === 0 && (
                         <div className="p-4 text-sm text-gray-500">Chưa có mã nào trong danh sách của bạn.</div>
                     )}
-                    {!loading && watchlist.map(item => (
-                        <div key={item.symbol} className="animate-slide-in">
+                    {/* ORIGINAL: key={item.symbol} */}
+                    {/* NEW: use symbol-index key to avoid collisions when duplicated symbols appear */}
+                    {!loading && watchlist.map((item, index) => (
+                        <div key={`${item.symbol}-${index}`} className="animate-slide-in">
                             {renderTableRow(item, true, handleRemove)}
                         </div>
                     ))}
@@ -465,8 +471,8 @@ const WatchlistSection = () => {
                     {marketSegments.topGainers.length === 0 && (
                         <div className="p-4 text-sm text-gray-500 text-center">Đang tải...</div>
                     )}
-                    {marketSegments.topGainers.map(item => (
-                        <div key={item.symbol} className="animate-slide-in">
+                    {marketSegments.topGainers.map((item, index) => (
+                        <div key={`${item.symbol}-${index}`} className="animate-slide-in">
                             {renderTableRow(item, false)}
                         </div>
                     ))}
@@ -488,8 +494,8 @@ const WatchlistSection = () => {
                     {marketSegments.topLosers.length === 0 && (
                         <div className="p-4 text-sm text-gray-500 text-center">Đang tải...</div>
                     )}
-                    {marketSegments.topLosers.map(item => (
-                        <div key={item.symbol} className="animate-slide-in">
+                    {marketSegments.topLosers.map((item, index) => (
+                        <div key={`${item.symbol}-${index}`} className="animate-slide-in">
                             {renderTableRow(item, false)}
                         </div>
                     ))}
@@ -509,8 +515,8 @@ const WatchlistSection = () => {
                     </div>
 
                     <div className="space-y-1 p-2 max-h-[200px] overflow-y-auto">
-                        {marketSegments.highVolume.map(item => (
-                            <div key={item.symbol} className="animate-slide-in">
+                        {marketSegments.highVolume.map((item, index) => (
+                            <div key={`${item.symbol}-${index}`} className="animate-slide-in">
                                 {renderTableRow(item, false)}
                             </div>
                         ))}
