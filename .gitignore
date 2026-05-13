@@ -115,3 +115,8 @@ example_with_history.py
 ChatUI
 chatgpt-ai-template
 .next/
+!backend/tests/
+!backend/tests/unit/
+!backend/tests/unit/**
+!backend/tests/unit/*.test.js
+!backend/tests/unit/**/*.test.js
