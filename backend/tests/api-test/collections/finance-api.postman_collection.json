@@ -1,0 +1,1021 @@
+{
+  "info": {
+    "_postman_id": "qa-finance-api",
+    "name": "Personal Financial Management API",
+    "description": "API test collection cho Personal Financial Management hệ thống.\n\n## CÁC CHẠY CÓ CỰ CHI TIẾT:\n\n### 1. ENVIRONMENT VARIABLES:\n- {{baseUrl}}: http://localhost:8000\n- {{authToken}}: JWT token được set từ Auth/Login\n- {{email}}: test@example.com (set trước khi chạy)\n- {{fullName}}: Test User\n- {{password}}: password123\n\n### 2. TEST FLOW:\n1. Login/Register → lưu authToken vào environment\n2. Sử dụng authToken cho các requests sau (Authorization: Bearer {{authToken}})\n3. Mỗi request có test script để validate response\n\n### 3. STATUS CODE MEANINGS:\n✅ 200 = Success (GET, DELETE)\n✅ 201 = Created (POST)\n❌ 400 = Bad Request (validation error)\n❌ 401 = Unauthorized (missing/invalid token)\n❌ 404 = Not Found (resource not found)\n\n### 4. TEST SCRIPTS:\nMỗi request có 'event' với 'test' script để:\n- Kiểm tra status code\n- Validate response body\n- Lưu dữ liệu vào environment (token, IDs, etc.)\n\n### 5. CÁCH CHẠY:\n```bash\nnpx newman run finance-api.postman_collection.json \\\n  -e local.postman_environment.json \\\n  -r json --reporter-json-export report.json\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Auth / Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 400', function () { pm.expect([201, 400]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('authToken', body.token || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"{{fullName}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Auth / Login",
+          "description": "Đăng nhập với email & password. Nếu thành công (200), lưu token vào environment để dùng cho requests tiếp theo.\n\n**Test Script Explanation:**\n1. Kiểm tra status là 200 hoặc 400\n2. Nếu 200 → lưu token: pm.environment.set('authToken', body.token)\n3. Token được sử dụng bởi các requests khác qua header: Authorization: Bearer {{authToken}}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// === AUTH LOGIN TEST SCRIPT ===",
+                  "// Mục đích: Kiểm tra login thành công & lưu token",
+                  "",
+                  "// Bước 1: Kiểm tra status code (200 = success, 400 = validation error)",
+                  "pm.test('status is 200 or 400', function () { ",
+                  "  pm.expect([200, 400]).to.include(pm.response.code); ",
+                  "});",
+                  "",
+                  "// Bước 2: Nếu login thành công (status 200), lưu token vào environment",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  // Token sẽ được dùng bởi các requests khác (Income, Expense, Dashboard, etc.)",
+                  "  // Qua header: Authorization: Bearer {{authToken}}",
+                  "  pm.environment.set('authToken', body.token || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Auth / Login 400 - missing email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Auth / Login 400 - wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"wrong\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Auth / Get User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('email matches', function () { pm.expect(pm.response.json().email).to.eql(pm.environment.get('email')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/getUser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "getUser"]
+            }
+          }
+        },
+        {
+          "name": "Auth / Get User 401 - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/getUser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "getUser"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "News",
+      "item": [
+        {
+          "name": "News / Get",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('news list not empty', function () {",
+                  "  const body = pm.response.json();",
+                  "  const list = Array.isArray(body) ? body : body.data;",
+                  "  pm.expect(list && list.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/news",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "news"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ticker",
+      "item": [
+        {
+          "name": "Ticker / Get Bar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 500', function () { pm.expect([200, 500]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('response is array', function () { pm.expect(pm.response.json()).to.be.an('array'); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticker/get-bar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ticker", "get-bar"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Dashboard / Get Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Dashboard / Get Summary 401 - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "dashboard"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Income",
+      "item": [
+        {
+          "name": "Income / Add",
+          "description": "Tạo income mới. Bắt buộc cần authToken (được lưu từ Auth/Login).\n\n**Test Script Explanation:**\n1. Kiểm tra status là 200 (Created)\n2. Lưu income ID vào environment để dùng cho delete test tiếp theo\n3. Income được tạo cho user hiện tại (xác định bởi token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// === INCOME ADD TEST SCRIPT ===",
+                  "// Mục đích: Kiểm tra tạo income thành công & lưu ID",
+                  "",
+                  "// Bước 1: Kiểm tra status 200 (OK) - có nghĩa là income được tạo",
+                  "pm.test('status is 200', function () { ",
+                  "  pm.response.to.have.status(200); ",
+                  "});",
+                  "",
+                  "// Bước 2: Nếu thành công, lưu income ID để dùng cho delete test sau",
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.set('incomeId', pm.response.json()._id || '');",
+                  "  // ID này sẽ được dùng bởi: Income / Delete request",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"icon\": \"wallet\",\n  \"source\": \"Salary\",\n  \"amount\": 1000,\n  \"date\": \"2024-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/income/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "income", "add"]
+            }
+          }
+        },
+        {
+          "name": "Income / Add 400 - missing fields",
+          "description": "Test validation error - gửi request thiếu required fields.\n\n**Test Script Explanation:**\n1. Kiểm tra status là 400 (Bad Request)\n2. 400 = Server từ chối vì validation fail (missing fields)\n\n**Body thiếu gì?**\n- Chỉ có: amount\n- Thiếu: source, date, icon (required fields)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// === INCOME ADD 400 TEST - VALIDATION ERROR ===",
+                  "// Mục đích: Kiểm tra server từ chối request không hợp lệ",
+                  "",
+                  "// Kiểm tra status 400 (Bad Request) - validation failed",
+                  "pm.test('status is 400', function () { ",
+                  "  pm.response.to.have.status(400); ",
+                  "});",
+                  "",
+                  "// 400 là kết quả dự kiến vì:",
+                  "// Body thiếu required fields: source, date, icon",
+                  "// Server validate & từ chối request"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"\",\n  \"amount\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/income/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "income", "add"]
+            }
+          }
+        },
+        {
+          "name": "Income / Get",
+          "description": "Lấy danh sách income của user hiện tại.\n\n**Test Script Explanation:**\n1. Kiểm tra status 200 (OK)\n2. Kiểm tra response là array (danh sách)\n3. Yêu cầu authToken trong header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// === INCOME GET TEST ===",
+                  "// Mục đích: Kiểm tra lấy income list thành công",
+                  "",
+                  "// Bước 1: Kiểm tra status 200 (OK)",
+                  "pm.test('status is 200', function () { ",
+                  "  pm.response.to.have.status(200); ",
+                  "});",
+                  "",
+                  "// Bước 2: Kiểm tra response là array (danh sách income)",
+                  "pm.test('response is array', function () { ",
+                  "  pm.expect(pm.response.json()).to.be.an('array'); ",
+                  "});",
+                  "",
+                  "// Lưu ý: Request này cần Authorization header với token"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/income/get",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "income", "get"]
+            }
+          }
+        },
+        {
+          "name": "Income / Get 401 - no token",
+          "description": "Test authorization error - gửi request KHÔNG có authToken.\n\n**Test Script Explanation:**\n1. Kiểm tra status 401 (Unauthorized)\n2. 401 = Server từ chối vì không có token hoặc token không hợp lệ\n\n**Khác biệt với Get thành công:**\n- Get thành công: Có Authorization header\n- Get 401: KHÔNG có Authorization header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// === INCOME GET 401 TEST - AUTHORIZATION ERROR ===",
+                  "// Mục đích: Kiểm tra server từ chối request không có token",
+                  "",
+                  "// Kiểm tra status 401 (Unauthorized)",
+                  "pm.test('status is 401', function () { ",
+                  "  pm.response.to.have.status(401); ",
+                  "});",
+                  "",
+                  "// 401 là kết quả dự kiến vì:",
+                  "// - Request này KHÔNG có Authorization header",
+                  "// - Server yêu cầu token để truy cập resources của user",
+                  "// - Nếu không có token → 401 Unauthorized"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/income/get",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "income", "get"]
+            }
+          }
+        },
+        {
+          "name": "Income / Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/income/{{incomeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "income", "{{incomeId}}"]
+            }
+          }
+        },
+        {
+          "name": "Income / Delete 404 - invalid id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/income/000000000000000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "income", "000000000000000000000000"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Expense",
+      "item": [
+        {
+          "name": "Expense / Add",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.set('expenseId', pm.response.json()._id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"icon\": \"cart\",\n  \"category\": \"Food\",\n  \"amount\": 100,\n  \"date\": \"2024-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expense/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expense", "add"]
+            }
+          }
+        },
+        {
+          "name": "Expense / Add 400 - missing fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"\",\n  \"amount\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expense/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expense", "add"]
+            }
+          }
+        },
+        {
+          "name": "Expense / Get",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('response is array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expense/get",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expense", "get"]
+            }
+          }
+        },
+        {
+          "name": "Expense / Get 401 - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expense/get",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expense", "get"]
+            }
+          }
+        },
+        {
+          "name": "Expense / Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expense/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expense", "{{expenseId}}"]
+            }
+          }
+        },
+        {
+          "name": "Expense / Delete 404 - invalid id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expense/000000000000000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expense", "000000000000000000000000"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Watchlist",
+      "item": [
+        {
+          "name": "Watchlist / Add",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 409', function () { pm.expect([201, 409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"type\": \"crypto\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/watchlist/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "watchlist", "add"]
+            }
+          }
+        },
+        {
+          "name": "Watchlist / Add 400 - missing symbol",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"\",\n  \"type\": \"crypto\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/watchlist/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "watchlist", "add"]
+            }
+          }
+        },
+        {
+          "name": "Watchlist / Get",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/watchlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "watchlist"]
+            }
+          }
+        },
+        {
+          "name": "Watchlist / Get 401 - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/watchlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "watchlist"]
+            }
+          }
+        },
+        {
+          "name": "Watchlist / Remove 404 - symbol not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/watchlist/remove/ZZZNOTREAL",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "watchlist", "remove", "ZZZNOTREAL"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "Assets / Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 500', function () { pm.expect([200, 500]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('response is array', function () { pm.expect(pm.response.json()).to.be.an('array'); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assets?q=BTC",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assets"],
+              "query": [
+                { "key": "q", "value": "BTC" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Price",
+      "item": [
+        {
+          "name": "Price / Latest",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('response has symbol', function () { pm.expect(pm.response.json().symbol).to.be.a('string'); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/price/latest?symbol=BTCUSDT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "price", "latest"],
+              "query": [
+                { "key": "symbol", "value": "BTCUSDT" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Price / Latest 400 - missing symbol",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/price/latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "price", "latest"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Market",
+      "item": [
+        {
+          "name": "Market / Tickers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/market/tickers?symbols=BTCUSDT,ETHUSDT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "market", "tickers"],
+              "query": [
+                { "key": "symbols", "value": "BTCUSDT,ETHUSDT" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prediction",
+      "item": [
+        {
+          "name": "Prediction / Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 503', function () { pm.expect([200, 503]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/prediction/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "prediction", "health"]
+            }
+          }
+        },
+        {
+          "name": "Prediction / Get 401 - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/prediction/BTCUSDT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "prediction", "BTCUSDT"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health / Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 500 or 503', function () { pm.expect([200, 500, 503]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

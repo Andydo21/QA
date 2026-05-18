@@ -10,6 +10,8 @@
     "backfill": "node jobs/cron_backfill.js",
     "test": "jest --testPathPattern=tests/unit --coverage",
     "test:watch": "jest --testPathPattern=tests/unit --watch",
+    "test:auth": "jest tests/unit/authController.test.js --runInBand --verbose --colors --no-coverage",
+    "test:auth:table": "node scripts/run_auth_tests_table.js",
     "test:selenium:sheet1": "node tests/part1_selenium/run_sheet1_selenium.js",
     "test:part1": "node tests/part1_selenium/run_all.js"
   },

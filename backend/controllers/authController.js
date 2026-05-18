@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { getMailerTransporter } = require('../config/mailer');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -88,9 +88,15 @@ exports.getUseInfo = async (req, res) => {
 
 // Forgot Password
 exports.forgotPassword = async (req, res) => {
-    const { email } = req.body;
+    const { email } = req.body || {};
+
+    if (!email) {
+        return res.status(400).json({ message: "Please provide email" });
+    }
+
+    let user;
     try {
-        const user = await User.findOne({ email });
+        user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "Không tìm thấy tài khoản với email này" });
         }
@@ -114,19 +120,25 @@ exports.forgotPassword = async (req, res) => {
             <a href="${resetUrl}" clicktracking=off>${resetUrl}</a>
         `;
 
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.error("Missing email configuration: EMAIL_USER or EMAIL_PASS");
-            throw new Error("Server email configuration is missing.");
+        const provider = (process.env.EMAIL_PROVIDER || 'gmail').toLowerCase();
+        const hasGmailConfig = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+        const hasMailtrapConfig = Boolean(
+            process.env.EMAIL_HOST || process.env.MAILTRAP_HOST
+        ) && Boolean(process.env.EMAIL_USER || process.env.MAILTRAP_USER) && Boolean(process.env.EMAIL_PASS || process.env.MAILTRAP_PASS);
+
+        if (provider === 'gmail' && !hasGmailConfig) {
+            throw new Error("Missing Gmail SMTP configuration. Set EMAIL_USER and EMAIL_PASS.");
         }
 
-        // Configure email transporter
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+        if (provider === 'mailtrap' && !hasMailtrapConfig) {
+            throw new Error("Missing Mailtrap SMTP configuration. Set EMAIL_HOST, EMAIL_USER, and EMAIL_PASS.");
+        }
+
+        const transporter = getMailerTransporter();
+
+        if (!transporter) {
+            throw new Error('Mail transporter is not configured');
+        }
 
         await transporter.sendMail({
             to: user.email,
@@ -137,9 +149,11 @@ exports.forgotPassword = async (req, res) => {
         res.status(200).json({ message: "Email đặt lại mật khẩu đã được gửi" });
     } catch (error) {
         console.error("Forgot Password Error:", error);
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        await user.save({ validateBeforeSave: false });
+        if (user) {
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+        }
         res.status(500).json({ message: "Lỗi gửi email", error: error.message });
     }
 };
@@ -147,7 +161,15 @@ exports.forgotPassword = async (req, res) => {
 // Reset Password
 exports.resetPassword = async (req, res) => {
     const { resetToken } = req.params;
-    const { password } = req.body;
+    const { password } = req.body || {};
+
+    if (!resetToken) {
+        return res.status(400).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+    }
+
+    if (!password) {
+        return res.status(400).json({ message: "Vui lòng nhập mật khẩu mới" });
+    }
 
     // Password Validation
     if (password.length < 8) {
